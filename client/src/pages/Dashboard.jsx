@@ -37,38 +37,42 @@ const Dashboard = () => {
     };
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-            <h1>Dashboard</h1>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+        <div className="centered-page" style={{ background: '#f8f9fa' }}>
+            <h1 className="highlighter animate-spring" style={{ fontFamily: 'var(--marker-font)', fontSize: '3.5rem', marginBottom: '0.8rem', color: 'var(--text)' }}>My Sketchbook</h1>
+            <p style={{ color: 'var(--text-dim)', marginBottom: '3.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>Floating ideas, sketchy outcomes.</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '2rem' }}>
-                <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <h3>Create a New Room</h3>
+            {error && <p style={{ color: '#fa5252', fontWeight: 'bold', marginBottom: '1.5rem', fontFamily: 'var(--doodle-font)' }}>{error}</p>}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '3rem', width: '100%', maxWidth: '1000px' }}>
+                <div className="sketch-card animate-spring" style={{ animationDelay: '0.1s' }}>
+                    <h3 style={{ fontFamily: 'var(--marker-font)', color: 'var(--text)', fontSize: '1.8rem', marginBottom: '1.5rem' }}>Start New</h3>
                     <form onSubmit={handleCreateRoom}>
                         <input
                             type="text"
-                            placeholder="Board Name"
+                            placeholder="Name your board..."
                             value={roomName}
                             onChange={(e) => setRoomName(e.target.value)}
                             required
-                            style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+                            className="sketch-input"
+                            style={{ marginBottom: '1.5rem', background: '#f8f9fa', borderRadius: '4px' }}
                         />
-                        <button type="submit" style={{ width: '100%', background: 'var(--primary)', color: 'white' }}>Create & Join</button>
+                        <button type="submit" className="sketch-button" style={{ width: '100%', borderColor: 'var(--primary)', color: 'var(--primary)', fontWeight: 'bold', background: '#eef2ff' }}>Create Canvas</button>
                     </form>
                 </div>
 
-                <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <h3>Join Existing Room</h3>
+                <div className="sketch-card animate-spring" style={{ animationDelay: '0.2s' }}>
+                    <h3 style={{ fontFamily: 'var(--marker-font)', color: 'var(--text)', fontSize: '1.8rem', marginBottom: '1.5rem' }}>Join Collab</h3>
                     <form onSubmit={handleJoinRoom}>
                         <input
                             type="text"
-                            placeholder="Room ID"
+                            placeholder="Enter Studio ID..."
                             value={joinRoomId}
                             onChange={(e) => setJoinRoomId(e.target.value)}
                             required
-                            style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+                            className="sketch-input"
+                            style={{ marginBottom: '1.5rem', background: '#f8f9fa', borderRadius: '4px' }}
                         />
-                        <button type="submit" style={{ width: '100%', background: 'var(--secondary)', color: 'white' }}>Join Room</button>
+                        <button type="submit" className="sketch-button" style={{ width: '100%', borderColor: 'var(--secondary)', color: 'var(--secondary)', fontWeight: 'bold' }}>Jump In</button>
                     </form>
                 </div>
             </div>

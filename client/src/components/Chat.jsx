@@ -49,29 +49,39 @@ const Chat = ({ roomId, onUsersUpdate }) => {
     };
 
     return (
-        <div className="chat-box">
-            <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold' }}>
-                Room Chat
-            </div>
-            <div className="messages" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+        <div className="chat-container" style={{ fontFamily: 'var(--doodle-font)' }}>
+            <div className="chat-messages">
                 {messages.map((msg, index) => (
-                    <div key={index} style={{ marginBottom: '0.8rem' }}>
-                        <span style={{ fontWeight: 'bold', color: 'var(--primary)', fontSize: '0.8rem' }}>{msg.user}</span>
-                        <span style={{ float: 'right', fontSize: '0.7rem', color: '#94a3b8' }}>{msg.time}</span>
-                        <div style={{ background: '#f8fafc', padding: '0.5rem', borderRadius: '4px', marginTop: '0.2rem' }}>
+                    <div key={index} style={{ marginBottom: '1.5rem', width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', padding: '0 0.4rem', fontSize: '0.85rem' }}>
+                            <span style={{ fontWeight: 'bold' }}>{msg.user}</span>
+                            <span style={{ color: 'var(--text-dim)' }}>{msg.time}</span>
+                        </div>
+                        <div className="animate-spring" style={{
+                            padding: '0.8rem 1.2rem',
+                            border: '1.5px solid #eee',
+                            borderRadius: index % 2 === 0 ? '20px 5px 20px 5px / 5px 20px 5px 20px' : '5px 20px 5px 20px / 20px 5px 20px 5px',
+                            background: index % 2 === 0 ? 'rgba(105, 101, 219, 0.08)' : 'rgba(173, 181, 189, 0.08)',
+                            fontSize: '0.95rem',
+                            width: 'fit-content',
+                            maxWidth: '90%',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                            borderLeft: index % 2 === 0 ? '3px solid var(--primary)' : '1.5px solid #eee'
+                        }}>
                             {msg.message}
                         </div>
                     </div>
                 ))}
                 <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={sendMessage} className="message-input">
+            <form onSubmit={sendMessage} className="chat-input-box">
                 <input
                     type="text"
-                    placeholder="Type a message..."
+                    placeholder="Wanna say something?"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }}
+                    className="sketch-input"
+                    style={{ background: '#f8f9fa', fontSize: '0.9rem' }}
                 />
             </form>
         </div>
