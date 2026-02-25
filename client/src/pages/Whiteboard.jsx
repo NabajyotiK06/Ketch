@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Pencil, Eraser, Download, Trash2, RotateCcw, RotateCw, Settings, Users, MessageSquare, LogOut, Menu, Share2 } from 'lucide-react';
+import { Pencil, Eraser, Download, Trash2, RotateCcw, RotateCw, Settings, Users, MessageSquare, LogOut, Menu, Share2, Type, Palette } from 'lucide-react';
 import Canvas from '../components/Canvas';
 import Chat from '../components/Chat';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,8 @@ const Whiteboard = () => {
     const [tool, setTool] = useState('pencil');
     const [users, setUsers] = useState([]);
     const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [bgColor, setBgColor] = useState('#ffffff');
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const handleClear = () => {
         if (window.confirm('Wipe the entire canvas clean?')) {
@@ -34,11 +36,11 @@ const Whiteboard = () => {
         <div className="whiteboard-view">
             {/* Main Canvas Area */}
             <div className="canvas-container">
-                <Canvas roomId={roomId} color={color} size={size} tool={tool} />
+                <Canvas roomId={roomId} color={color} size={size} tool={tool} bgColor={bgColor} />
             </div>
 
             {/* Floating UI Overlay */}
-            <div className="floating-overlay">
+            <div className="floating-overlay" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
 
                 {/* Top Left: Home/Menu */}
                 <div className="action-box top-left animate-spring" style={{ animationDelay: '0.1s' }}>
@@ -50,70 +52,64 @@ const Whiteboard = () => {
                     </div>
                 </div>
 
-                {/* Top Center: Toolbar */}
-                <div className="sketch-panel toolbar-floating animate-float-center">
+                {/* Top Center: Collapsible Toolbar menu */}
+                <div style={{ position: 'absolute', top: '1.5rem', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <button
-                        className={`tool-btn ${tool === 'pencil' ? 'active' : ''}`}
-                        onClick={() => setTool('pencil')}
-                        title="Drawing Pencil"
+                        className={`sketch-panel tool-btn animate-spring ${isMenuOpen ? 'active' : ''}`}
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        style={{ width: 'auto', padding: '0.5rem 1.5rem', borderRadius: '30px', display: 'flex', gap: '0.6rem', background: '#ffffff' }}
                     >
-                        <Pencil size={20} />
+                        <Settings size={20} /> <span style={{ fontWeight: 'bold' }}>Studio Tools</span>
                     </button>
-                    <button
-                        className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`}
-                        onClick={() => setTool('eraser')}
-                        title="Eraser Tool"
-                    >
-                        <Eraser size={20} />
-                    </button>
+                    {isMenuOpen && (
+                        <div className="sketch-panel animate-spring" style={{ marginTop: '0.8rem', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.2rem', borderRadius: '16px', minWidth: '240px', background: 'white', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                <button className={`tool-btn ${tool === 'pencil' ? 'active' : ''}`} onClick={() => setTool('pencil')} title="Pencil">
+                                    <Pencil size={20} />
+                                </button>
+                                <button className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`} onClick={() => setTool('eraser')} title="Eraser">
+                                    <Eraser size={20} />
+                                </button>
+                                <button className={`tool-btn ${tool === 'text' ? 'active' : ''}`} onClick={() => setTool('text')} title="Text">
+                                    <Type size={20} />
+                                </button>
+                            </div>
 
-                    <div style={{ width: '1.5px', height: '28px', background: '#eee', margin: '0 0.8rem' }} />
+                            <div style={{ height: '1.5px', background: '#eee', margin: '0 0.2rem' }} />
 
-                    <div className="tool-btn" style={{ position: 'relative' }}>
-                        <input
-                            type="color"
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                            disabled={tool === 'eraser'}
-                            style={{
-                                width: '32px',
-                                height: '32px',
-                                border: '2px solid #ddd',
-                                borderRadius: '50%',
-                                cursor: 'pointer',
-                                padding: 0,
-                                background: color,
-                                border: 'none'
-                            }}
-                        />
-                    </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-dim)' }}><Palette size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} />Stroke Color</span>
+                                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} disabled={tool === 'eraser'} style={{ width: '32px', height: '32px', cursor: 'pointer', padding: 0, border: 'none', background: color, borderRadius: '8px' }} />
+                            </div>
 
-                    <select
-                        value={size}
-                        onChange={(e) => setSize(Number(e.target.value))}
-                        style={{
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '1rem',
-                            fontWeight: 'bold',
-                            padding: '0 0.5rem',
-                            fontFamily: 'var(--doodle-font)'
-                        }}
-                    >
-                        <option value="2">Fine</option>
-                        <option value="5">Mid</option>
-                        <option value="10">Bold</option>
-                    </select>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-dim)' }}>Stroke Size</span>
+                                <select value={size} onChange={(e) => setSize(Number(e.target.value))} style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '0.2rem', fontFamily: 'var(--doodle-font)', background: '#f8f9fa' }}>
+                                    <option value="2">Fine</option>
+                                    <option value="5">Mid</option>
+                                    <option value="10">Bold</option>
+                                </select>
+                            </div>
 
-                    <div style={{ width: '1.5px', height: '28px', background: '#eee', margin: '0 0.8rem' }} />
+                            <div style={{ height: '1.5px', background: '#eee', margin: '0 0.2rem' }} />
 
-                    <button onClick={handleDownload} title="Export Artwork" className="tool-btn">
-                        <Download size={20} />
-                    </button>
-                    <button onClick={handleClear} className="tool-btn" style={{ color: '#fa5252' }} title="Clear Paper">
-                        <Trash2 size={20} />
-                    </button>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-dim)' }}>Paper Color</span>
+                                <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} style={{ width: '32px', height: '32px', cursor: 'pointer', padding: 0, border: 'none', background: bgColor, borderRadius: '8px' }} />
+                            </div>
+
+                            <div style={{ height: '1.5px', background: '#eee', margin: '0 0.2rem' }} />
+
+                            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center' }}>
+                                <button onClick={handleDownload} title="Export Artwork" className="tool-btn" style={{ flex: 1 }}>
+                                    <Download size={18} /> <span style={{ fontSize: '0.8rem', marginLeft: '0.4rem', fontWeight: 'bold' }}>Save</span>
+                                </button>
+                                <button onClick={handleClear} className="tool-btn" style={{ flex: 1, color: '#fa5252', background: '#fff5f5', borderColor: '#ffe6e6' }} title="Clear Paper">
+                                    <Trash2 size={18} /> <span style={{ fontSize: '0.8rem', marginLeft: '0.4rem', fontWeight: 'bold' }}>Wipe</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Top Right: Actions */}

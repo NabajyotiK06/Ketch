@@ -44,8 +44,12 @@ io.on('connection', (socket) => {
             usersInRooms[roomId] = [];
         }
 
-        // Add user to room if not already there
-        if (!usersInRooms[roomId].find(u => u.id === socket.id)) {
+        // Add user to room if not already there (check by username to prevent duplicates on refresh)
+        const existingUserIndex = usersInRooms[roomId].findIndex(u => u.username === username);
+        if (existingUserIndex !== -1) {
+            // Update their socket ID if they reconnected
+            usersInRooms[roomId][existingUserIndex].id = socket.id;
+        } else {
             usersInRooms[roomId].push({ id: socket.id, username });
         }
 
@@ -55,6 +59,10 @@ io.on('connection', (socket) => {
 
     socket.on('draw', (data) => {
         socket.to(data.roomId).emit('draw', data);
+    });
+
+    socket.on('draw-text', (data) => {
+        socket.to(data.roomId).emit('draw-text', data);
     });
 
     socket.on('clear', (roomId) => {
