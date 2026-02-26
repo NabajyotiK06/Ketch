@@ -19,6 +19,10 @@ const RoomSchema = new mongoose.Schema({
         type: String, // Stringified canvas state or image URL
         default: "",
     },
+    shapesData: {
+        type: String, // JSON array of shape objects for restoring selection/editing
+        default: '[]',
+    },
     participants: [
         {
             type: mongoose.Schema.Types.ObjectId,

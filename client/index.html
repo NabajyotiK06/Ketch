@@ -7,6 +7,14 @@
     <title>client</title>
   </head>
   <body>
+    <!-- Apply saved theme before React mounts — prevents flash of wrong theme -->
+    <script>
+      (function() {
+        var t = localStorage.getItem('ketch-theme');
+        if (t === 'dark') document.documentElement.dataset.theme = 'dark';
+      })();
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

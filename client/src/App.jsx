@@ -4,17 +4,21 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Whiteboard from './pages/Whiteboard';
+import LandingPage from './pages/LandingPage';
 import Navbar from './components/Navbar';
 import './App.css';
 
 const AppContent = () => {
   const location = useLocation();
+  const { token } = useAuth();
   const isRoom = location.pathname.startsWith('/room/');
+  const isLanding = location.pathname === '/';
 
   return (
     <div className="app-container">
-      {!isRoom && <Navbar />}
+      {!isRoom && !isLanding && <Navbar />}
       <Routes>
+        <Route path="/" element={token ? <Navigate to="/dashboard" /> : <LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
@@ -27,13 +31,8 @@ const AppContent = () => {
         />
         <Route
           path="/room/:roomId"
-          element={
-            <PrivateRoute>
-              <Whiteboard />
-            </PrivateRoute>
-          }
+          element={<Whiteboard />}
         />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
     </div>
   );
