@@ -7,7 +7,7 @@ import {
     Settings, Users, MessageSquare, LogOut, Menu, Share2, Type,
     Image, Palette, Lock, Hand, MousePointer2, Square, Diamond,
     Circle, MoveRight, Minus, Copy, Check, UserCheck, UserX, Clock,
-    Sun, Moon
+    Sun, Moon, Droplets
 } from 'lucide-react';
 import Canvas from '../components/Canvas';
 import Chat from '../components/Chat';
@@ -21,10 +21,14 @@ const Whiteboard = () => {
 
     // Drawing state
     const [color, setColor] = useState('#1e1e1e');
+    const [fillColor, setFillColor] = useState('transparent');
     const [size, setSize] = useState(2);
     const [eraserSize, setEraserSize] = useState(20);
     const [tool, setTool] = useState('pencil');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    // Onboarding overlay — shown once, dismissed on first interaction
+    const [showOnboarding, setShowOnboarding] = useState(true);
+    const dismissOnboarding = () => setShowOnboarding(false);
     const [isLocked, setIsLocked] = useState(false);
 
     // Global dark mode (persisted in localStorage)
@@ -278,16 +282,93 @@ const Whiteboard = () => {
 
     // ── Main Whiteboard UI ────────────────────────────────
     return (
-        <div className="whiteboard-view">
+        <div className="whiteboard-view" onClick={showOnboarding ? dismissOnboarding : undefined}>
             {/* Link Copied Toast */}
             <div className={`share-toast ${linkCopied ? 'visible' : ''}`}>
                 <Check size={16} style={{ marginRight: '0.4rem' }} />
                 Invite link copied!
             </div>
 
+            {/* Onboarding Overlay */}
+            {showOnboarding && (
+                <div className="onboarding-overlay" aria-hidden="true">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, pointerEvents: 'none' }}
+                        viewBox="0 0 1024 540"
+                        preserveAspectRatio="xMidYMid meet"
+                    >
+                        <defs>
+                            <style>{`
+                                .ob-text {
+                                    font-family: 'Caveat', 'Segoe UI', cursive;
+                                    font-size: 18px;
+                                    fill: #9ca3af;
+                                    letter-spacing: 0.02em;
+                                }
+                                .ob-arrow {
+                                    fill: none;
+                                    stroke: #9ca3af;
+                                    stroke-width: 2;
+                                    stroke-linecap: round;
+                                    stroke-linejoin: round;
+                                }
+                            `}</style>
+                            <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" fill="#9ca3af" />
+                            </marker>
+                        </defs>
+
+                        {/* ── Available Canvas label (top-left area) ── */}
+                        {/* Arrow pointing up-left to the Menu (≡) button */}
+                        <path className="ob-arrow" d="M55,60 Q38,44 24,28" marker-end="url(#arrowhead)" />
+                        <text className="ob-text" x="38" y="78">Available canvas</text>
+
+                        {/* ── Tools Bar label (top-center) ── */}
+                        {/* Arrow from label curving up to the toolbar */}
+                        <path className="ob-arrow" d="M392,128 Q388,95 384,58" marker-end="url(#arrowhead)" />
+                        <text className="ob-text" x="378" y="140">Tools Bar</text>
+
+                        {/* ── Users label (top-right) ── */}
+                        {/* Arrow from label curving up-right to the NA avatar */}
+                        <path className="ob-arrow" d="M762,68 Q790,44 820,26" marker-end="url(#arrowhead)" />
+                        <text className="ob-text" x="722" y="84">Users</text>
+
+                        {/* ── Chat label (far top-right) ── */}
+                        {/* Arrow from Chat label curving up to the chat icon */}
+                        <path className="ob-arrow" d="M926,138 Q960,100 992,60" marker-end="url(#arrowhead)" />
+                        <text className="ob-text" x="908" y="155">Chat</text>
+
+                        {/* ── Undo/Redo label (bottom-left) ── */}
+                        {/* Arrow curving from label down-left to the buttons */}
+                        <path className="ob-arrow" d="M155,366 Q108,442 50,512" marker-end="url(#arrowhead)" />
+                        <text className="ob-text" x="148" y="358">undo/redo</text>
+
+                        {/* ── Drawing Board label (center) ── */}
+                        {/* 4 diagonal arrows pointing outward from center */}
+                        {/* top-left arrow */}
+                        <path className="ob-arrow" d="M492,280 L462,255" marker-end="url(#arrowhead)" />
+                        {/* top arrow */}
+                        <path className="ob-arrow" d="M512,272 L512,242" marker-end="url(#arrowhead)" />
+                        {/* top-right arrow */}
+                        <path className="ob-arrow" d="M532,280 L558,255" marker-end="url(#arrowhead)" />
+                        {/* bottom-left arrow */}
+                        <path className="ob-arrow" d="M492,310 L462,338" marker-end="url(#arrowhead)" />
+                        {/* bottom-right arrow */}
+                        <path className="ob-arrow" d="M532,310 L562,338" marker-end="url(#arrowhead)" />
+                        <text className="ob-text" x="468" y="306">Drawing Board</text>
+
+                        {/* Tap anywhere hint */}
+                        <text style={{ fontFamily: "'Caveat', cursive", fontSize: '14px', fill: '#c4b5fd' }} x="50%" y="97%" textAnchor="middle">
+                            Click anywhere to start drawing ✦
+                        </text>
+                    </svg>
+                </div>
+            )}
+
             {/* Main Canvas */}
             <div className="canvas-container">
-                <Canvas roomId={roomId} color={color} size={tool === 'eraser' ? eraserSize : size} tool={tool} socket={socket} theme={currentTheme} locked={isLocked} />
+                <Canvas roomId={roomId} color={color} fillColor={fillColor} size={tool === 'eraser' ? eraserSize : size} tool={tool} socket={socket} theme={currentTheme} locked={isLocked} onHasContent={dismissOnboarding} />
             </div>
 
             {/* Floating UI Overlay */}
@@ -302,7 +383,7 @@ const Whiteboard = () => {
 
                 {/* Top Center Toolbar */}
                 <div className="top-toolbar-wrapper">
-                    <div className="top-toolbar animate-spring" style={{ animationDelay: '0.15s' }}>
+                    <div className="top-toolbar animate-spring" style={{ animationDelay: '0.15s' }} onClick={showOnboarding ? dismissOnboarding : undefined}>
                         <button
                             className={`sketch-panel tool-btn ${isLocked ? 'active' : ''}`}
                             onClick={() => setIsLocked(l => !l)}
@@ -323,12 +404,36 @@ const Whiteboard = () => {
                         <button className={`tool-btn ${tool === 'text' ? 'active' : ''}`} onClick={() => setTool('text')} title="Text (T)"><Type size={16} /></button>
                         <button className={`tool-btn ${tool === 'image' ? 'active' : ''}`} onClick={() => setTool('image')} title="Image"><Image size={16} /></button>
                         <button className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`} onClick={() => setTool('eraser')} title="Eraser"><Eraser size={16} /></button>
+                        <button className={`tool-btn ${tool === 'fill' ? 'active' : ''}`} onClick={() => setTool('fill')} title="Fill (bucket)">
+                            <Droplets size={16} />
+                        </button>
                         <div style={{ width: '1px', height: '20px', background: 'var(--panel-border)', margin: '0 2px', flexShrink: 0 }} />
 
-                        {/* Color Picker */}
-                        <div style={{ display: 'flex', alignItems: 'center', margin: '0 2px' }} title="Stroke Color">
-                            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} disabled={tool === 'eraser'}
-                                style={{ width: '22px', height: '22px', cursor: 'pointer', padding: 0, border: '2px solid var(--panel-border)', background: color, borderRadius: '6px', opacity: tool === 'eraser' ? 0.4 : 1 }} />
+                        {/* Stroke + Fill colour swatches */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '0 3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Stroke Color">
+                                <span style={{ fontSize: '9px', color: 'var(--text-dim)', userSelect: 'none', lineHeight: 1 }}>S</span>
+                                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} disabled={tool === 'eraser'}
+                                    style={{ width: '20px', height: '20px', cursor: 'pointer', padding: 0, border: '2px solid var(--panel-border)', borderRadius: '4px', opacity: tool === 'eraser' ? 0.4 : 1 }} />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Fill Color">
+                                <span style={{ fontSize: '9px', color: 'var(--text-dim)', userSelect: 'none', lineHeight: 1 }}>F</span>
+                                <div style={{ position: 'relative', width: '20px', height: '20px' }}>
+                                    <input type="color" value={fillColor === 'transparent' ? '#ffffff' : fillColor}
+                                        onChange={(e) => setFillColor(e.target.value)}
+                                        style={{ width: '20px', height: '20px', cursor: 'pointer', padding: 0, border: '2px solid var(--panel-border)', borderRadius: '4px' }} />
+                                    {fillColor === 'transparent' && (
+                                        <div onClick={() => setFillColor('#ffffff')} title="No fill — click to set fill"
+                                            style={{ position: 'absolute', inset: 0, background: 'white', borderRadius: '3px', border: '2px solid var(--panel-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', pointerEvents: 'auto' }}>
+                                            <div style={{ width: '14px', height: '1.5px', background: '#dc2626', transform: 'rotate(-45deg)' }} />
+                                        </div>
+                                    )}
+                                </div>
+                                {fillColor !== 'transparent' && (
+                                    <button onClick={() => setFillColor('transparent')} title="Remove fill"
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-dim)', fontSize: '10px', lineHeight: 1 }}>✕</button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Settings */}
@@ -357,14 +462,21 @@ const Whiteboard = () => {
                                 <input type="range" min="5" max="100" value={eraserSize} onChange={(e) => setEraserSize(Number(e.target.value))} style={{ width: '100px', cursor: 'pointer', accentColor: 'var(--primary)' }} />
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-dim)' }}>Stroke Size</span>
-                                <select value={size} onChange={(e) => setSize(Number(e.target.value))} style={{ border: '1px solid var(--panel-border)', borderRadius: '4px', padding: '0.2rem', fontFamily: 'var(--doodle-font)', background: 'var(--input-bg)', color: 'var(--text)' }}>
-                                    <option value="2">Fine</option>
-                                    <option value="5">Mid</option>
-                                    <option value="10">Bold</option>
-                                    <option value="20">Marker</option>
-                                </select>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-dim)' }}>Stroke Size</span>
+                                    <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 'bold', minWidth: '28px', textAlign: 'right' }}>{size}px</span>
+                                </div>
+                                <input type="range" min="1" max="40" value={size} onChange={(e) => setSize(Number(e.target.value))}
+                                    style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--primary)' }} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    {[1, 3, 8, 16, 40].map(v => (
+                                        <button key={v} onClick={() => setSize(v)}
+                                            style={{ fontSize: '0.7rem', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: size === v ? 'var(--primary)' : 'var(--input-bg)', color: size === v ? 'white' : 'var(--text-dim)', cursor: 'pointer', fontFamily: 'var(--doodle-font)' }}>
+                                            {v === 1 ? 'Fine' : v === 3 ? 'Med' : v === 8 ? 'Bold' : v === 16 ? 'Thick' : 'Marker'}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         )}
                         <div style={{ height: '1.5px', background: 'var(--divider)', margin: '0 0.2rem' }} />

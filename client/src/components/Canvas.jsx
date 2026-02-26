@@ -6,7 +6,7 @@ import axios from 'axios';
 let shapeIdCounter = 0;
 const generateId = () => `shape_${Date.now()}_${shapeIdCounter++}`;
 
-const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '#ffffff', bgImage: null, eraserColor: '#ffffff' }, locked = false }) => {
+const Canvas = ({ roomId, color, fillColor = 'transparent', size, tool, socket: propSocket, theme = { bg: '#ffffff', bgImage: null, eraserColor: '#ffffff' }, locked = false, onHasContent }) => {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const socketRef = useRef(null);
@@ -70,6 +70,10 @@ const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '
             case 'rectangle': {
                 const w = shape.x2 - shape.x1;
                 const h = shape.y2 - shape.y1;
+                if (shape.fillColor && shape.fillColor !== 'transparent') {
+                    ctx.fillStyle = shape.fillColor;
+                    ctx.fillRect(shape.x1, shape.y1, w, h);
+                }
                 ctx.strokeRect(shape.x1, shape.y1, w, h);
                 break;
             }
@@ -80,6 +84,10 @@ const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '
                 const ry = Math.abs(shape.y2 - shape.y1) / 2;
                 ctx.beginPath();
                 ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                if (shape.fillColor && shape.fillColor !== 'transparent') {
+                    ctx.fillStyle = shape.fillColor;
+                    ctx.fill();
+                }
                 ctx.stroke();
                 break;
             }
@@ -92,6 +100,10 @@ const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '
                 ctx.lineTo(mx, shape.y2);
                 ctx.lineTo(shape.x1, my);
                 ctx.closePath();
+                if (shape.fillColor && shape.fillColor !== 'transparent') {
+                    ctx.fillStyle = shape.fillColor;
+                    ctx.fill();
+                }
                 ctx.stroke();
                 break;
             }
@@ -372,6 +384,7 @@ const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '
                         socketRef.current.emit('restore-shapes', { roomId, shapes: shapesRef.current });
                         redrawAll();
                         saveToHistory();
+                        onHasContent?.();  // canvas is not blank — hide onboarding
                         return; // shapes restored — don't also set bgImageRef (would cause double draw)
                     }
                 } catch (e) { console.warn('Failed to parse shapesData', e); }
@@ -384,6 +397,7 @@ const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '
                     bgImageRef.current = img;
                     redrawAll();
                     saveToHistory();
+                    onHasContent?.();  // legacy canvas has content — hide onboarding
                 };
                 img.src = canvasData;
             }
@@ -500,6 +514,23 @@ const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '
 
         return () => {
             clearInterval(saveInterval);
+
+            // ── Save on unmount so drawings are never lost when the user exits ──
+            const token = localStorage.getItem('token');
+            if (token && canvasRef.current) {
+                const canvasData = canvasRef.current.toDataURL();
+                const shapesData = JSON.stringify(
+                    shapesRef.current.map(s => {
+                        const { selected, imgEl, ...rest } = s;
+                        return rest;
+                    })
+                );
+                axios.put(`http://localhost:5000/api/rooms/${roomId}/save`,
+                    { canvasData, shapesData },
+                    { headers: { 'x-auth-token': token } }
+                ).catch(err => console.error('Save-on-exit failed', err));
+            }
+
             socketRef.current.off('sync-shapes', handleSyncShapes);
             socketRef.current.off('draw-move', handleDrawMove);
             socketRef.current.off('add-shape', handleAddShape);
@@ -563,6 +594,20 @@ const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '
     const startDrawing = (e) => {
         const { offsetX, offsetY, clientX, clientY } = e.nativeEvent;
         const { x: wx, y: wy } = canvasToWorld(offsetX, offsetY);
+
+        // Fill bucket tool — click on a shape to apply fillColor
+        if (tool === 'fill') {
+            for (let i = shapesRef.current.length - 1; i >= 0; i--) {
+                const shape = shapesRef.current[i];
+                if (['rectangle', 'ellipse', 'diamond'].includes(shape.type) && isPointInShape(shape, wx, wy)) {
+                    shape.fillColor = fillColor;
+                    socketRef.current?.emit('update-shape', { roomId, shape });
+                    redrawAll();
+                    break;
+                }
+            }
+            return;
+        }
 
         // Text tool
         if (tool === 'text') {
@@ -677,6 +722,7 @@ const Canvas = ({ roomId, color, size, tool, socket: propSocket, theme = { bg: '
                 x2: wx,
                 y2: wy,
                 color,
+                fillColor: ['rectangle', 'ellipse', 'diamond'].includes(tool) ? fillColor : 'transparent',
                 size
             };
         }
