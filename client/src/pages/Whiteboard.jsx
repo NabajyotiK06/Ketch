@@ -13,6 +13,7 @@ import Canvas from '../components/Canvas';
 import Chat from '../components/Chat';
 import VideoGrid from '../components/VideoGrid';
 import { useAuth } from '../context/AuthContext';
+import API_URL from '../config';
 
 const Whiteboard = () => {
     const { roomId } = useParams();
@@ -71,7 +72,7 @@ const Whiteboard = () => {
 
     // Load room info
     useEffect(() => {
-        axios.get(`http://localhost:5000/api/rooms/${roomId}`)
+        axios.get(`${API_URL}/api/rooms/${roomId}`)
             .then(res => setHostId(res.data.host))
             .catch(err => console.error('Failed to load room details', err));
     }, [roomId]);
@@ -80,7 +81,7 @@ const Whiteboard = () => {
     useEffect(() => {
         const username = user?.username || guestName;
         if (!username) return; // wait until guest enters a name
-        socketRef.current = io('http://localhost:5000');
+        socketRef.current = io(API_URL);
         setSocket(socketRef.current);
         socketRef.current.emit('join-room', { roomId, username });
 

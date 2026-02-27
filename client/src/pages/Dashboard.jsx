@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import API_URL from '../config';
 
 const Dashboard = () => {
     const [roomName, setRoomName] = useState('');
@@ -16,7 +17,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         if (!token) return;
-        axios.get('http://localhost:5000/api/rooms/my-rooms', {
+        axios.get(`${API_URL}/api/rooms/my-rooms`, {
             headers: { 'x-auth-token': token }
         })
             .then(res => setMyRooms(res.data))
@@ -28,7 +29,7 @@ const Dashboard = () => {
         e.preventDefault();
         const roomId = Math.random().toString(36).substring(2, 9);
         try {
-            await axios.post('http://localhost:5000/api/rooms/create',
+            await axios.post(`${API_URL}/api/rooms/create`,
                 { name: roomName, roomId },
                 { headers: { 'x-auth-token': token } }
             );
@@ -41,7 +42,7 @@ const Dashboard = () => {
     const handleJoinRoom = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.get(`http://localhost:5000/api/rooms/${joinRoomId}`);
+            const res = await axios.get(`${API_URL}/api/rooms/${joinRoomId}`);
             if (res.data) {
                 navigate(`/room/${joinRoomId}`);
             }
@@ -60,7 +61,7 @@ const Dashboard = () => {
         setDeletingId(roomId);
         setConfirmDeleteId(null);
         try {
-            await axios.delete(`http://localhost:5000/api/rooms/${roomId}`, {
+            await axios.delete(`${API_URL}/api/rooms/${roomId}`, {
                 headers: { 'x-auth-token': token }
             });
             setMyRooms(prev => prev.filter(r => r.roomId !== roomId));

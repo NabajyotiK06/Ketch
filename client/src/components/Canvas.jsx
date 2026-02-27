@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import axios from 'axios';
+import API_URL from '../config';
 
 // Generate a unique ID for each shape
 let shapeIdCounter = 0;
@@ -356,7 +357,7 @@ const Canvas = ({ roomId, color, fillColor = 'transparent', size, tool, socket: 
         if (propSocket) {
             socketRef.current = propSocket;
         } else {
-            socketRef.current = io('http://localhost:5000');
+            socketRef.current = io(API_URL);
             const username = localStorage.getItem('username') || 'Anonymous';
             socketRef.current.emit('join-room', { roomId, username });
         }
@@ -367,7 +368,7 @@ const Canvas = ({ roomId, color, fillColor = 'transparent', size, tool, socket: 
         // Load saved canvas: restore shape OBJECTS first (for selection/editing),
         // and use canvasData image only as a background for shapes that predate
         // shape-level tracking (legacy canvases with no shapesData).
-        axios.get(`http://localhost:5000/api/rooms/${roomId}`).then(res => {
+        axios.get(`${API_URL}/api/rooms/${roomId}`).then(res => {
             const { canvasData, shapesData } = res.data || {};
 
             // Restore shape objects so they are selectable/deletable
@@ -503,7 +504,7 @@ const Canvas = ({ roomId, color, fillColor = 'transparent', size, tool, socket: 
                         return rest;
                     })
                 );
-                axios.put(`http://localhost:5000/api/rooms/${roomId}/save`,
+                axios.put(`${API_URL}/api/rooms/${roomId}/save`,
                     { canvasData, shapesData },
                     { headers: { 'x-auth-token': token } }
                 ).catch(err => console.error('Auto-save failed', err));
@@ -525,7 +526,7 @@ const Canvas = ({ roomId, color, fillColor = 'transparent', size, tool, socket: 
                         return rest;
                     })
                 );
-                axios.put(`http://localhost:5000/api/rooms/${roomId}/save`,
+                axios.put(`${API_URL}/api/rooms/${roomId}/save`,
                     { canvasData, shapesData },
                     { headers: { 'x-auth-token': token } }
                 ).catch(err => console.error('Save-on-exit failed', err));
