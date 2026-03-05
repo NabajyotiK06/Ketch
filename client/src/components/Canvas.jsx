@@ -145,24 +145,7 @@ const Canvas = ({ roomId, color, fillColor = 'transparent', size, tool, socket: 
                 break;
             }
             case 'eraser': {
-                // Paint over with the background colour — syncs like a pencil stroke
-                if (!shape.points || shape.points.length < 1) break;
-                ctx.strokeStyle = shape.bgColor || '#ffffff';
-                ctx.lineWidth = shape.size;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.beginPath();
-                if (shape.points.length === 1) {
-                    ctx.arc(shape.points[0].x, shape.points[0].y, shape.size / 2, 0, Math.PI * 2);
-                    ctx.fillStyle = shape.bgColor || '#ffffff';
-                    ctx.fill();
-                } else {
-                    ctx.moveTo(shape.points[0].x, shape.points[0].y);
-                    for (let i = 1; i < shape.points.length; i++) {
-                        ctx.lineTo(shape.points[i].x, shape.points[i].y);
-                    }
-                    ctx.stroke();
-                }
+                // Eraser shapes are never persisted — nothing to draw
                 break;
             }
             case 'image': {
@@ -777,18 +760,123 @@ const Canvas = ({ roomId, color, fillColor = 'transparent', size, tool, socket: 
             return;
         }
 
-        // Eraser: strokes appended like pencil
+        // Eraser: precisely hit-test and delete only the topmost shape the brush touches
         if (tool === 'eraser') {
             if (!drawingShapeRef.current) return;
-            drawingShapeRef.current.points.push({ x: wx, y: wy });
-            socketRef.current.emit('draw-move', {
-                roomId,
-                shapeId: drawingShapeRef.current.id,
-                type: 'eraser',
-                size: drawingShapeRef.current.size,
-                bgColor: drawingShapeRef.current.bgColor,
-                points: drawingShapeRef.current.points,
-            });
+            const eraserRadius = (drawingShapeRef.current.size || 10) / 2;
+
+            // Precise per-shape-type hit test using actual geometry, not just bounding box
+            const eraserHitsShape = (shape) => {
+                switch (shape.type) {
+                    case 'pencil': {
+                        // Check distance from eraser center to each line segment of the stroke
+                        if (!shape.points || shape.points.length < 1) return false;
+                        const strokeRadius = (shape.size || 2) / 2;
+                        const hitRadius = eraserRadius + strokeRadius;
+                        if (shape.points.length === 1) {
+                            const p = shape.points[0];
+                            return Math.hypot(wx - p.x, wy - p.y) <= hitRadius;
+                        }
+                        for (let i = 0; i < shape.points.length - 1; i++) {
+                            const ax = shape.points[i].x, ay = shape.points[i].y;
+                            const bx = shape.points[i + 1].x, by = shape.points[i + 1].y;
+                            const dx = bx - ax, dy = by - ay;
+                            const lenSq = dx * dx + dy * dy;
+                            let t = lenSq > 0 ? ((wx - ax) * dx + (wy - ay) * dy) / lenSq : 0;
+                            t = Math.max(0, Math.min(1, t));
+                            const closestX = ax + t * dx;
+                            const closestY = ay + t * dy;
+                            if (Math.hypot(wx - closestX, wy - closestY) <= hitRadius) return true;
+                        }
+                        return false;
+                    }
+                    case 'line':
+                    case 'arrow': {
+                        const strokeRadius = (shape.size || 2) / 2;
+                        const hitRadius = eraserRadius + strokeRadius;
+                        const dx = shape.x2 - shape.x1, dy = shape.y2 - shape.y1;
+                        const lenSq = dx * dx + dy * dy;
+                        let t = lenSq > 0 ? ((wx - shape.x1) * dx + (wy - shape.y1) * dy) / lenSq : 0;
+                        t = Math.max(0, Math.min(1, t));
+                        const closestX = shape.x1 + t * dx;
+                        const closestY = shape.y1 + t * dy;
+                        return Math.hypot(wx - closestX, wy - closestY) <= hitRadius;
+                    }
+                    case 'rectangle': {
+                        const x1 = Math.min(shape.x1, shape.x2), x2 = Math.max(shape.x1, shape.x2);
+                        const y1 = Math.min(shape.y1, shape.y2), y2 = Math.max(shape.y1, shape.y2);
+                        const sw = (shape.size || 2) / 2;
+                        if (shape.fillColor && shape.fillColor !== 'transparent') {
+                            // Filled: interior touch counts
+                            return wx >= x1 - eraserRadius && wx <= x2 + eraserRadius &&
+                                wy >= y1 - eraserRadius && wy <= y2 + eraserRadius;
+                        }
+                        // Outline only: close to any of the 4 edges
+                        const hitR = eraserRadius + sw;
+                        const onTop = Math.abs(wy - y1) <= hitR && wx >= x1 - hitR && wx <= x2 + hitR;
+                        const onBottom = Math.abs(wy - y2) <= hitR && wx >= x1 - hitR && wx <= x2 + hitR;
+                        const onLeft = Math.abs(wx - x1) <= hitR && wy >= y1 - hitR && wy <= y2 + hitR;
+                        const onRight = Math.abs(wx - x2) <= hitR && wy >= y1 - hitR && wy <= y2 + hitR;
+                        return onTop || onBottom || onLeft || onRight;
+                    }
+                    case 'ellipse': {
+                        const cx = (shape.x1 + shape.x2) / 2, cy = (shape.y1 + shape.y2) / 2;
+                        const rx = Math.abs(shape.x2 - shape.x1) / 2;
+                        const ry = Math.abs(shape.y2 - shape.y1) / 2;
+                        if (rx < 1 || ry < 1) return false;
+                        const sw = (shape.size || 2) / 2;
+                        const nxOuter = (wx - cx) / (rx + eraserRadius + sw);
+                        const nyOuter = (wy - cy) / (ry + eraserRadius + sw);
+                        if (nxOuter * nxOuter + nyOuter * nyOuter > 1) return false;
+                        if (shape.fillColor && shape.fillColor !== 'transparent') return true;
+                        // Outline only: not inside the inner ellipse
+                        const nxInner = (wx - cx) / Math.max(1, rx - eraserRadius - sw);
+                        const nyInner = (wy - cy) / Math.max(1, ry - eraserRadius - sw);
+                        return nxInner * nxInner + nyInner * nyInner >= 1;
+                    }
+                    case 'diamond': {
+                        const mx = (shape.x1 + shape.x2) / 2, my = (shape.y1 + shape.y2) / 2;
+                        const hw = Math.abs(shape.x2 - shape.x1) / 2;
+                        const hh = Math.abs(shape.y2 - shape.y1) / 2;
+                        const sw = (shape.size || 2) / 2 + eraserRadius;
+                        // Normalise to diamond check: |dx/hw| + |dy/hh| <= 1
+                        if (hw < 1 || hh < 1) return false;
+                        const norm = Math.abs(wx - mx) / (hw + sw) + Math.abs(wy - my) / (hh + sw);
+                        if (norm > 1) return false;
+                        if (shape.fillColor && shape.fillColor !== 'transparent') return true;
+                        const normInner = Math.abs(wx - mx) / Math.max(1, hw - sw) + Math.abs(wy - my) / Math.max(1, hh - sw);
+                        return normInner >= 1;
+                    }
+                    case 'text': {
+                        const bounds = getShapeBounds(shape);
+                        if (!bounds) return false;
+                        return wx >= bounds.x - eraserRadius && wx <= bounds.x + bounds.w + eraserRadius &&
+                            wy >= bounds.y - eraserRadius && wy <= bounds.y + bounds.h + eraserRadius;
+                    }
+                    case 'image': {
+                        const bounds = getShapeBounds(shape);
+                        if (!bounds) return false;
+                        return wx >= bounds.x - eraserRadius && wx <= bounds.x + bounds.w + eraserRadius &&
+                            wy >= bounds.y - eraserRadius && wy <= bounds.y + bounds.h + eraserRadius;
+                    }
+                    default:
+                        return false;
+                }
+            };
+
+            // Find the single topmost shape that the eraser actually touches
+            let hitShape = null;
+            for (let i = shapesRef.current.length - 1; i >= 0; i--) {
+                if (eraserHitsShape(shapesRef.current[i])) {
+                    hitShape = shapesRef.current[i];
+                    break;
+                }
+            }
+            if (hitShape) {
+                shapesRef.current = shapesRef.current.filter(s => s.id !== hitShape.id);
+                socketRef.current.emit('delete-shape', { roomId, id: hitShape.id });
+                saveToHistory();
+            }
             redrawAll();
             return;
         }
@@ -889,13 +977,8 @@ const Canvas = ({ roomId, color, fillColor = 'transparent', size, tool, socket: 
             return;
         }
 
-        // Eraser — finalise like pencil
+        // Eraser — just clean up the preview shape (shapes already deleted in draw())
         if (tool === 'eraser') {
-            if (isDrawing && drawingShapeRef.current) {
-                shapesRef.current.push(drawingShapeRef.current);
-                socketRef.current.emit('add-shape', { roomId, shape: drawingShapeRef.current });
-                saveToHistory();
-            }
             drawingShapeRef.current = null;
             setIsDrawing(false);
             return;
