@@ -139,7 +139,7 @@ const LandingPage = () => {
     }, []);
 
     return (
-        <div className="landing-page">
+        <div className="landing-page custom-cursor">
             {/* ── Navbar ── */}
             <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
                 <span className="landing-nav-logo">Ketch ✏️</span>

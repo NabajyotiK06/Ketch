@@ -2176,3 +2176,21 @@ body {
   background: var(--primary);
   color: white;
 }
+
+/* Custom Cursor for Auth/Landing Pages */
+.custom-cursor,
+.custom-cursor * {
+  cursor: url('./assets/pencil-cursor.svg') 1 1, auto !important;
+}
+
+.custom-cursor input,
+.custom-cursor textarea {
+  cursor: text !important;
+}
+
+.custom-cursor a,
+.custom-cursor button,
+.custom-cursor .glow-btn,
+.custom-cursor .landing-cta-btn {
+  cursor: url('./assets/pencil-cursor.svg') 1 1, pointer !important;
+}
