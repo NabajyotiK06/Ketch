@@ -42,9 +42,17 @@ const Dashboard = () => {
     const handleJoinRoom = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.get(`${API_URL}/api/rooms/${joinRoomId}`);
+            let extractedId = joinRoomId.trim();
+            // Handle both full URLs and raw IDs
+            if (extractedId.includes('/room/')) {
+                extractedId = extractedId.split('/room/').pop();
+            } else if (extractedId.includes('/')) {
+                extractedId = extractedId.split('/').pop();
+            }
+            
+            const res = await axios.get(`${API_URL}/api/rooms/${extractedId}`);
             if (res.data) {
-                navigate(`/room/${joinRoomId}`);
+                navigate(`/room/${extractedId}`);
             }
         } catch (err) {
             setError('Room not found');
